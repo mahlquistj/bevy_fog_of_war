@@ -4,23 +4,22 @@ use crate::{FogSystems, RequestChunkSnapshot};
 use bevy_asset::{Assets, RenderAssetUsages};
 use bevy_color::Color;
 use bevy_core_pipeline::core_2d::graph::{Core2d, Node2d};
-use bevy_core_pipeline::prelude::Camera2d;
+use bevy_camera::{Camera, Camera2d, ClearColorConfig, OrthographicProjection, Projection, RenderTarget, ScalingMode};
+use bevy_camera::visibility::RenderLayers;
 use bevy_image::Image;
 use bevy_math::{IVec2, Rect};
 use bevy_render::RenderApp;
-use bevy_render::camera::RenderTarget;
 use bevy_render::extract_component::ExtractComponent;
 use bevy_render::extract_resource::{ExtractResource, ExtractResourcePlugin};
 use bevy_render::render_asset::RenderAssets;
 use bevy_render::render_graph::{
-    Node, NodeRunError, RenderGraphApp, RenderGraphContext, RenderLabel,
+    Node, NodeRunError, RenderGraphExt, RenderGraphContext, RenderLabel,
 };
 use bevy_render::render_resource::{
     Extent3d, Origin3d, TexelCopyTextureInfo, TextureAspect, TextureDimension, TextureUsages,
 };
 use bevy_render::renderer::RenderContext;
 use bevy_render::texture::GpuImage;
-use bevy_render::view::RenderLayers;
 use bevy_transform::components::{GlobalTransform, Transform};
 
 /// Plugin for managing fog of war snapshot system that captures previously explored areas.
@@ -84,7 +83,7 @@ impl Plugin for SnapshotPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(ExtractResourcePlugin::<SnapshotCameraState>::default());
         app.init_resource::<SnapshotCameraState>();
-        app.add_event::<RequestCleanChunkSnapshot>();
+        app.add_message::<RequestCleanChunkSnapshot>();
         app.add_systems(Startup, setup_snapshot_camera)
             .add_systems(PostUpdate, prepare_snapshot_camera)
             .add_systems(Update, ensure_snapshot_render_layer)
@@ -141,7 +140,7 @@ pub struct MainWorldSnapshotRequest {
 
 /// Event to request clean a snapshot for a specific chunk.
 /// 请求为特定区块清理快照的事件。
-#[derive(Event, Debug, Clone, Copy)]
+#[derive(Message, Debug, Clone, Copy)]
 pub struct RequestCleanChunkSnapshot(pub IVec2);
 
 /// Component trigger to force a snapshot capture of specific Capturable entities.
@@ -337,7 +336,7 @@ fn setup_snapshot_camera(
         Camera2d,
         Projection::Orthographic(OrthographicProjection {
             scale: settings.chunk_size.x as f32 / settings.texture_resolution_per_chunk.x as f32,
-            scaling_mode: bevy_render::camera::ScalingMode::Fixed {
+            scaling_mode: ScalingMode::Fixed {
                 width: settings.texture_resolution_per_chunk.x as f32,
                 height: settings.texture_resolution_per_chunk.y as f32,
             },
@@ -347,10 +346,9 @@ fn setup_snapshot_camera(
             clear_color: ClearColorConfig::Custom(Color::srgba(0.0, 0.0, 0.0, 0.0)),
             order: -1,        // Render before the main camera, or as needed by graph
             is_active: false, // Initially inactive
-            hdr: false,       // Snapshots likely don't need HDR
-            target: RenderTarget::Image(snapshot_temp_handle.clone().into()),
             ..Default::default()
         },
+        RenderTarget::Image(snapshot_temp_handle.clone().into()), // RenderTarget is now a separate component in Bevy 0.18
         SnapshotCamera, // Mark it as our snapshot camera
         SNAPSHOT_RENDER_LAYER,
     ));
@@ -683,7 +681,7 @@ pub fn ensure_snapshot_render_layer(
 /// - **After**: FogSystems::UpdateChunkState (chunk states updated)
 /// - **Before**: FogSystems::ManageEntities (entities managed based on requests)
 fn handle_request_chunk_snapshot_events(
-    mut events: EventReader<RequestChunkSnapshot>,
+    mut events: MessageReader<RequestChunkSnapshot>,
     chunk_manager: Res<ChunkEntityManager>,
     chunk_query: Query<&FogChunk>, // Query for FogChunk to get its details / 查询 FogChunk 以获取其详细信息
     mut snapshot_requests: ResMut<MainWorldSnapshotRequestQueue>,

@@ -442,7 +442,7 @@ pub struct SaveMetadata {
 
 /// 请求保存雾效数据的事件
 /// Event to request saving fog of war data
-#[derive(Event, Debug, Clone)]
+#[derive(Message, Debug, Clone)]
 pub struct SaveFogOfWarRequest {
     /// 是否包含纹理数据
     /// Whether to include texture data
@@ -454,7 +454,7 @@ pub struct SaveFogOfWarRequest {
 
 /// 请求加载雾效数据的事件
 /// Event to request loading fog of war data
-#[derive(Event, Debug, Clone)]
+#[derive(Message, Debug, Clone)]
 pub struct LoadFogOfWarRequest {
     /// 要加载的序列化数据
     /// Serialized data to load
@@ -466,7 +466,7 @@ pub struct LoadFogOfWarRequest {
 
 /// 雾效数据保存完成事件
 /// Event emitted when fog of war data is saved
-#[derive(Event, Debug, Clone)]
+#[derive(Message, Debug, Clone)]
 pub struct FogOfWarSaved {
     /// 序列化的数据
     /// Serialized data
@@ -481,7 +481,7 @@ pub struct FogOfWarSaved {
 
 /// 雾效数据加载完成事件
 /// Event emitted when fog of war data is loaded
-#[derive(Event, Debug, Clone)]
+#[derive(Message, Debug, Clone)]
 pub struct FogOfWarLoaded {
     /// 加载的区块数量
     /// Number of chunks loaded
@@ -740,13 +740,13 @@ pub fn load_save_data(
     // Use deferred command to ensure ensure_snapshot_render_layer runs before snapshot requests
     if !chunks_needing_snapshots.is_empty() {
         commands.queue(move |world: &mut World| {
-            let mut snapshot_events = world.resource_mut::<Events<RequestChunkSnapshot>>();
+            let mut snapshot_events = world.resource_mut::<Messages<RequestChunkSnapshot>>();
             for chunk_coords in chunks_needing_snapshots {
                 info!(
                     "Sending deferred RequestChunkSnapshot for chunk {:?}",
                     chunk_coords
                 );
-                snapshot_events.send(RequestChunkSnapshot(chunk_coords));
+                snapshot_events.write(RequestChunkSnapshot(chunk_coords));
             }
         });
     }
@@ -758,10 +758,10 @@ pub fn load_save_data(
 /// Save system parameter bundle
 #[derive(SystemParam)]
 pub struct SaveSystemParams<'w, 's> {
-    save_events: EventReader<'w, 's, SaveFogOfWarRequest>,
+    save_events: MessageReader<'w, 's, SaveFogOfWarRequest>,
     pending_saves: ResMut<'w, PendingSaveOperations>,
     gpu_to_cpu_requests: ResMut<'w, GpuToCpuCopyRequests>,
-    saved_events: EventWriter<'w, FogOfWarSaved>,
+    saved_events: MessageWriter<'w, FogOfWarSaved>,
     settings: Res<'w, FogMapSettings>,
     cache: Res<'w, ChunkStateCache>,
     chunks: Query<'w, 's, &'static FogChunk>,
@@ -956,9 +956,9 @@ pub fn save_fog_of_war_system(mut params: SaveSystemParams) {
 ///
 /// # Time Complexity: O(pending_chunks) per event, O(total_texture_data) for save completion
 pub fn handle_gpu_data_ready_system(
-    mut gpu_ready_events: EventReader<ChunkGpuDataReady>,
+    mut gpu_ready_events: MessageReader<ChunkGpuDataReady>,
     mut pending_saves: ResMut<PendingSaveOperations>,
-    mut saved_events: EventWriter<FogOfWarSaved>,
+    mut saved_events: MessageWriter<FogOfWarSaved>,
     settings: Res<FogMapSettings>,
 ) {
     for event in gpu_ready_events.read() {
@@ -1208,7 +1208,7 @@ fn create_save_data_immediate(
 fn complete_save_operation(
     save_data: FogOfWarSaveData,
     format: SerializationFormat,
-    saved_events: &mut EventWriter<FogOfWarSaved>,
+    saved_events: &mut MessageWriter<FogOfWarSaved>,
 ) {
     let result = match format {
         #[cfg(feature = "format-json")]
@@ -1253,8 +1253,8 @@ fn complete_save_operation(
 /// Load system parameter bundle
 #[derive(SystemParam)]
 pub struct LoadSystemParams<'w, 's> {
-    load_events: EventReader<'w, 's, LoadFogOfWarRequest>,
-    loaded_events: EventWriter<'w, FogOfWarLoaded>,
+    load_events: MessageReader<'w, 's, LoadFogOfWarRequest>,
+    loaded_events: MessageWriter<'w, FogOfWarLoaded>,
     commands: Commands<'w, 's>,
     settings: Res<'w, FogMapSettings>,
     cache: ResMut<'w, ChunkStateCache>,
@@ -1526,7 +1526,7 @@ pub fn load_fog_of_war_system(mut params: LoadSystemParams) {
 /// ```rust,no_run
 /// # use bevy::prelude::*;
 /// # use bevy_fog_of_war::prelude::*;
-/// fn save_fog_state(mut save_events: EventWriter<SaveFogOfWarRequest>) {
+/// fn save_fog_state(mut save_events: MessageWriter<SaveFogOfWarRequest>) {
 ///     save_events.send(SaveFogOfWarRequest {
 ///         include_texture_data: true,  // Complete save with GPU data
 ///         format: Some(SerializationFormat::Bincode),
@@ -1539,7 +1539,7 @@ pub fn load_fog_of_war_system(mut params: LoadSystemParams) {
 /// # use bevy::prelude::*;
 /// # use bevy_fog_of_war::prelude::*;
 /// fn load_fog_state(
-///     mut load_events: EventWriter<LoadFogOfWarRequest>,
+///     mut load_events: MessageWriter<LoadFogOfWarRequest>,
 ///     save_data: Vec<u8>  // Previously saved data
 /// ) {
 ///     load_events.send(LoadFogOfWarRequest {
@@ -1595,10 +1595,10 @@ pub struct FogOfWarPersistencePlugin;
 
 impl Plugin for FogOfWarPersistencePlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<SaveFogOfWarRequest>()
-            .add_event::<LoadFogOfWarRequest>()
-            .add_event::<FogOfWarSaved>()
-            .add_event::<FogOfWarLoaded>()
+        app.add_message::<SaveFogOfWarRequest>()
+            .add_message::<LoadFogOfWarRequest>()
+            .add_message::<FogOfWarSaved>()
+            .add_message::<FogOfWarLoaded>()
             .init_resource::<PendingSaveOperations>()
             .add_systems(
                 Update,

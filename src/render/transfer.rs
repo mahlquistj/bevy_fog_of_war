@@ -317,7 +317,7 @@ pub fn initiate_gpu_to_cpu_copies_and_request_map(
             continue;
         }
 
-        let fog_format_size = fog_format.pixel_size() as u32;
+        let fog_format_size = fog_format.pixel_size().unwrap_or(0) as u32;
         if fog_format_size == 0 {
             error!("Fog buffer size is 0 for chunk {:?}", request.chunk_coords);
             continue;
@@ -332,7 +332,7 @@ pub fn initiate_gpu_to_cpu_copies_and_request_map(
             .checked_mul(texture_height as u64)
             .expect("Fog buffer size calculation would overflow");
 
-        let snapshot_format_size = snapshot_format.pixel_size() as u32;
+        let snapshot_format_size = snapshot_format.pixel_size().unwrap_or(0) as u32;
         if snapshot_format_size == 0 {
             error!(
                 "Snapshot buffer size is 0 for chunk {:?}",
@@ -519,11 +519,13 @@ pub fn check_and_process_mapped_buffers(
         if let (Some(fog_data), Some(snapshot_data)) =
             (&pending_data.fog_result, &pending_data.snapshot_result)
         {
-            main_world.send_event(ChunkGpuDataReady {
-                chunk_coords: pending_data.original_request.chunk_coords,
-                fog_data: fog_data.clone(),
-                snapshot_data: snapshot_data.clone(),
-            });
+            if let Some(mut msgs) = main_world.get_resource_mut::<bevy_ecs::message::Messages<ChunkGpuDataReady>>() {
+                msgs.write(ChunkGpuDataReady {
+                    chunk_coords: pending_data.original_request.chunk_coords,
+                    fog_data: fog_data.clone(),
+                    snapshot_data: snapshot_data.clone(),
+                });
+            }
             false
         } else {
             true
@@ -719,7 +721,9 @@ pub(crate) fn check_cpu_to_gpu_request(
         })
         .collect::<Vec<ChunkCpuDataUploaded>>();
 
-    main_world.send_event_batch(requests);
+    if let Some(mut msgs) = main_world.get_resource_mut::<bevy_ecs::message::Messages<ChunkCpuDataUploaded>>() {
+        msgs.write_batch(requests);
+    }
 }
 
 /// 检查并清空纹理（在渲染世界中重置时）
@@ -817,7 +821,7 @@ pub fn check_and_clear_textures_on_reset(
     // 安全的雾效重置缓冲区大小计算，防止整数溢出
     // Safe fog reset buffer size calculation to prevent integer overflow
     let fog_bytes_per_row = (texture_width as u64)
-        .checked_mul(TextureFormat::R8Unorm.pixel_size() as u64)
+        .checked_mul(TextureFormat::R8Unorm.pixel_size().unwrap_or(0) as u64)
         .and_then(|v| u32::try_from(v).ok())
         .expect("Fog bytes per row calculation would overflow");
     let fog_padded_bytes_per_row =
@@ -830,7 +834,7 @@ pub fn check_and_clear_textures_on_reset(
     // 安全的可见性重置缓冲区大小计算，防止整数溢出
     // Safe visibility reset buffer size calculation to prevent integer overflow
     let vis_bytes_per_row = (texture_width as u64)
-        .checked_mul(TextureFormat::R8Unorm.pixel_size() as u64)
+        .checked_mul(TextureFormat::R8Unorm.pixel_size().unwrap_or(0) as u64)
         .and_then(|v| u32::try_from(v).ok())
         .expect("Visibility bytes per row calculation would overflow");
     let vis_padded_bytes_per_row =
@@ -843,7 +847,7 @@ pub fn check_and_clear_textures_on_reset(
     // 安全的快照重置缓冲区大小计算，防止整数溢出
     // Safe snapshot reset buffer size calculation to prevent integer overflow
     let snap_bytes_per_row = (texture_width as u64)
-        .checked_mul(TextureFormat::Rgba8Unorm.pixel_size() as u64) // RGBA already included in pixel_size
+        .checked_mul(TextureFormat::Rgba8Unorm.pixel_size().unwrap_or(0) as u64) // RGBA already included in pixel_size
         .and_then(|v| u32::try_from(v).ok())
         .expect("Snapshot bytes per row calculation would overflow");
     let snap_padded_bytes_per_row =

@@ -13,20 +13,21 @@ categories = ["game-development"]
 readme = "README.md"
 
 [dependencies]
-bevy_app = { version = "0.16" }
-bevy_asset = { version = "0.16" }
-bevy_core_pipeline = { version = "0.16" }
-bevy_color = { version = "0.16" }
-bevy_derive = { version = "0.16" }
-bevy_image = { version = "0.16" }
-bevy_ecs = { version = "0.16" }
-bevy_log = { version = "0.16" }
-bevy_math = { version = "0.16" }
-bevy_platform = { version = "0.16" }
-bevy_reflect = { version = "0.16" }
-bevy_render = { version = "0.16" }
-bevy_time = { version = "0.16" }
-bevy_transform = { version = "0.16" }
+bevy_app = { version = "0.18" }
+bevy_asset = { version = "0.18" }
+bevy_core_pipeline = { version = "0.18" }
+bevy_color = { version = "0.18" }
+bevy_derive = { version = "0.18" }
+bevy_image = { version = "0.18" }
+bevy_ecs = { version = "0.18" }
+bevy_log = { version = "0.18" }
+bevy_math = { version = "0.18" }
+bevy_platform = { version = "0.18" }
+bevy_reflect = { version = "0.18" }
+bevy_render = { version = "0.18" }
+bevy_camera = { version = "0.18" }
+bevy_time = { version = "0.18" }
+bevy_transform = { version = "0.18" }
 
 
 
@@ -56,7 +57,7 @@ format-bincode = ["bincode"]
 all-formats = ["format-json", "format-messagepack", "format-bincode", "all-compression"]
 
 [dev-dependencies]
-bevy = { version = "0.16" }
+bevy = { version = "0.18" }
 #bevy-inspector-egui = { version = "0.31" }
 
 

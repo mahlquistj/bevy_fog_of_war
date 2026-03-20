@@ -104,13 +104,13 @@ use bevy_ecs::prelude::*;
 use bevy_render::{
     render_graph::{Node, NodeRunError, RenderGraphContext, RenderLabel},
     render_resource::{
-        BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePassDescriptor,
-        ComputePipelineDescriptor, PipelineCache, ShaderStages,
+        BindGroupLayoutDescriptor, BindGroupLayoutEntries, CachedComputePipelineId,
+        ComputePassDescriptor, ComputePipelineDescriptor, PipelineCache, ShaderStages,
         StorageTextureAccess::{ReadWrite, WriteOnly},
         TextureFormat,
         binding_types::{storage_buffer_read_only, texture_storage_2d_array, uniform_buffer},
     },
-    renderer::{RenderContext, RenderDevice},
+    renderer::{RenderContext},
 };
 
 /// Path to the WGSL compute shader file that implements fog visibility calculations.
@@ -239,7 +239,7 @@ pub struct FogComputePipeline {
     /// This layout specifies how CPU resources (textures, buffers, uniforms)
     /// are bound to GPU shader inputs. It's used to create bind groups that
     /// provide data to the compute shader during execution.
-    pub compute_layout: BindGroupLayout,
+    pub compute_layout: BindGroupLayoutDescriptor,
 }
 
 /// Initializes the fog compute pipeline from world resources during application startup.
@@ -309,11 +309,7 @@ impl FromWorld for FogComputePipeline {
     /// O(1) for resource access and pipeline queuing, but shader compilation
     /// happens asynchronously and may take additional time.
     fn from_world(world: &mut World) -> Self {
-        let pipeline_cache = world.resource::<PipelineCache>();
-
-        let render_device = world.resource::<RenderDevice>();
-
-        let compute_layout = render_device.create_bind_group_layout(
+        let compute_layout = BindGroupLayoutDescriptor::new(
             "fog_compute_bind_group_layout",
             &BindGroupLayoutEntries::sequential(
                 ShaderStages::COMPUTE,
@@ -329,15 +325,18 @@ impl FromWorld for FogComputePipeline {
 
         let shader = world.load_asset(SHADER_ASSET_PATH);
 
-        let pipeline_id = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-            label: Some("fog_compute_pipeline".into()),
-            layout: vec![compute_layout.clone()], // Use the prepared layout / 使用准备好的布局
-            shader,
-            shader_defs: vec![], // Add shader defs if needed / 如果需要添加 shader defs
-            entry_point: "main".into(),
-            push_constant_ranges: vec![],
-            zero_initialize_workgroup_memory: false,
-        });
+        let pipeline_id =
+            world
+                .resource_mut::<PipelineCache>()
+                .queue_compute_pipeline(ComputePipelineDescriptor {
+                    label: Some("fog_compute_pipeline".into()),
+                    layout: vec![compute_layout.clone()], // Use the prepared layout / 使用准备好的布局
+                    shader,
+                    shader_defs: vec![], // Add shader defs if needed / 如果需要添加 shader defs
+                    entry_point: None, // Use default entry point "main"
+                    push_constant_ranges: vec![],
+                    zero_initialize_workgroup_memory: false,
+                });
 
         FogComputePipeline {
             pipeline_id,

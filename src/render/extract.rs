@@ -100,7 +100,8 @@ use bevy_asset::Handle;
 use bevy_color::ColorToComponents;
 use bevy_derive::{Deref, DerefMut};
 use bevy_image::Image;
-use bevy_math::{IVec2, Rect, UVec2, Vec2, Vec4};
+use bevy_camera::Projection;
+use bevy_math::{IVec2, Rect, UVec2, Vec2, Vec3, Vec4};
 use bevy_render::Extract;
 use bevy_render::render_resource::ShaderType;
 use bevy_transform::components::GlobalTransform;
@@ -887,7 +888,7 @@ pub fn extract_gpu_chunk_data(
         // Calculate view AABB for an orthographic camera
         // This assumes the FogOfWarCamera is orthographic. Handle perspective if needed.
         if let Projection::Orthographic(ortho_projection) = projection {
-            let camera_scale = camera_transform.compute_transform().scale;
+            let camera_scale: Vec3 = camera_transform.compute_transform().scale;
             // ortho_projection.area gives the size of the projection area.
             // For WindowSize scale mode, this area is in logical pixels, needing viewport size.
             // For Fixed scale mode, this area is in world units.
