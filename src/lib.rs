@@ -59,10 +59,10 @@ use self::prelude::*;
 use crate::persistence::FogOfWarPersistencePlugin;
 use crate::render::FogOfWarRenderPlugin;
 use bevy_asset::{Assets, RenderAssetUsages};
+use bevy_camera::{Camera, Projection, RenderTarget};
 use bevy_image::{Image, ImageSampler, ImageSamplerDescriptor};
 use bevy_math::{IVec2, Rect, Vec2};
 use bevy_platform::collections::HashSet;
-use bevy_camera::{Camera, Projection, RenderTarget};
 use bevy_render::extract_component::ExtractComponentPlugin;
 use bevy_render::extract_resource::ExtractResourcePlugin;
 use bevy_render::render_resource::{Extent3d, TextureDimension, TextureUsages};
@@ -548,7 +548,12 @@ fn update_camera_view_chunks(
     mut cache: ResMut<ChunkStateCache>,
     // Assuming a single primary 2D camera with OrthographicProjection
     // 假设有一个带 OrthographicProjection 的主 2D 相机
-    camera_q: Query<(&Camera, &GlobalTransform, &Projection, Option<&RenderTarget>)>,
+    camera_q: Query<(
+        &Camera,
+        &GlobalTransform,
+        &Projection,
+        Option<&RenderTarget>,
+    )>,
 ) {
     let chunk_size = settings.chunk_size.as_vec2();
 
@@ -556,7 +561,8 @@ fn update_camera_view_chunks(
         if let Projection::Orthographic(projection) = projection {
             // Consider only the active camera targeting the primary window
             // 只考虑渲染到主窗口的活动相机
-            let targets_window = render_target.map_or(true, |rt| matches!(rt, RenderTarget::Window(_)));
+            let targets_window =
+                render_target.is_none_or(|rt| matches!(rt, RenderTarget::Window(_)));
             if !camera.is_active || !targets_window {
                 continue;
             }

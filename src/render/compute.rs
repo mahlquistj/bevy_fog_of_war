@@ -110,7 +110,7 @@ use bevy_render::{
         TextureFormat,
         binding_types::{storage_buffer_read_only, texture_storage_2d_array, uniform_buffer},
     },
-    renderer::{RenderContext},
+    renderer::RenderContext,
 };
 
 /// Path to the WGSL compute shader file that implements fog visibility calculations.
@@ -325,18 +325,17 @@ impl FromWorld for FogComputePipeline {
 
         let shader = world.load_asset(SHADER_ASSET_PATH);
 
-        let pipeline_id =
-            world
-                .resource_mut::<PipelineCache>()
-                .queue_compute_pipeline(ComputePipelineDescriptor {
-                    label: Some("fog_compute_pipeline".into()),
-                    layout: vec![compute_layout.clone()], // Use the prepared layout / 使用准备好的布局
-                    shader,
-                    shader_defs: vec![], // Add shader defs if needed / 如果需要添加 shader defs
-                    entry_point: None, // Use default entry point "main"
-                    push_constant_ranges: vec![],
-                    zero_initialize_workgroup_memory: false,
-                });
+        let pipeline_id = world
+            .resource_mut::<PipelineCache>()
+            .queue_compute_pipeline(ComputePipelineDescriptor {
+                label: Some("fog_compute_pipeline".into()),
+                layout: vec![compute_layout.clone()], // Use the prepared layout / 使用准备好的布局
+                shader,
+                shader_defs: vec![], // Add shader defs if needed / 如果需要添加 shader defs
+                entry_point: None,   // Use default entry point "main"
+                push_constant_ranges: vec![],
+                zero_initialize_workgroup_memory: false,
+            });
 
         FogComputePipeline {
             pipeline_id,

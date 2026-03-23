@@ -704,13 +704,14 @@ pub fn prepare_fog_bind_groups(
     ) {
         // Bevy 0.18: get actual BindGroupLayout from descriptor via pipeline_cache
         // Bevy 0.18: 通过 pipeline_cache 从描述符获取实际的 BindGroupLayout
-        let compute_layout = pipeline_cache.get_bind_group_layout(&fog_compute_pipeline.compute_layout);
+        let compute_layout =
+            pipeline_cache.get_bind_group_layout(&fog_compute_pipeline.compute_layout);
 
         // Create compute bind group with all required resources for fog calculations
         // 创建包含雾效计算所需所有资源的计算绑定组
         let compute_bind_group = render_device.create_bind_group(
-            "fog_compute_bind_group",  // Debug label for GPU debugging
-            &compute_layout,           // Use the resolved BindGroupLayout
+            "fog_compute_bind_group", // Debug label for GPU debugging
+            &compute_layout,          // Use the resolved BindGroupLayout
             &BindGroupEntries::sequential((
                 fog_texture_view,                // 0: Fog texture array (write access)
                 visibility_texture_view,         // 1: Visibility texture array (read/write)

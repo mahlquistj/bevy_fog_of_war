@@ -457,43 +457,31 @@ impl FileFormat {
     pub fn from_extension(path: &Path) -> Option<Self> {
         let ext = path.extension()?.to_str()?;
 
-        // 检查双扩展名（如 .json.gz, .msgpack.lz4等）
         // Check for double extensions (like .json.gz, .msgpack.lz4, etc.)
-        if let Some(stem) = path.file_stem() {
-            if let Some(stem_str) = stem.to_str() {
-                if stem_str.ends_with(".json") {
-                    match ext {
-                        #[cfg(all(feature = "format-json", feature = "compression-gzip"))]
-                        "gz" => return Some(FileFormat::JsonGzip),
-                        #[cfg(all(feature = "format-json", feature = "compression-lz4"))]
-                        "lz4" => return Some(FileFormat::JsonLz4),
-                        #[cfg(all(feature = "format-json", feature = "compression-zstd"))]
-                        "zst" => return Some(FileFormat::JsonZstd),
-                        _ => {}
-                    }
-                } else if stem_str.ends_with(".msgpack") {
-                    match ext {
-                        #[cfg(all(feature = "format-messagepack", feature = "compression-gzip"))]
-                        "gz" => return Some(FileFormat::MessagePackGzip),
-                        #[cfg(all(feature = "format-messagepack", feature = "compression-lz4"))]
-                        "lz4" => return Some(FileFormat::MessagePackLz4),
-                        #[cfg(all(feature = "format-messagepack", feature = "compression-zstd"))]
-                        "zst" => return Some(FileFormat::MessagePackZstd),
-                        _ => {}
-                    }
-                } else if stem_str.ends_with(".bincode") {
-                    match ext {
-                        #[cfg(all(feature = "format-bincode", feature = "compression-gzip"))]
-                        "gz" => return Some(FileFormat::BincodeGzip),
-                        #[cfg(all(feature = "format-bincode", feature = "compression-lz4"))]
-                        "lz4" => return Some(FileFormat::BincodeLz4),
-                        #[cfg(all(feature = "format-bincode", feature = "compression-zstd"))]
-                        "zst" => return Some(FileFormat::BincodeZstd),
-                        _ => {}
-                    }
-                }
+        if let Some(stem_str) = path.file_stem().and_then(|s| s.to_str()) {
+            match (stem_str, ext) {
+                #[cfg(all(feature = "format-json", feature = "compression-gzip"))]
+                (s, "gz") if s.ends_with(".json") => return Some(FileFormat::JsonGzip),
+                #[cfg(all(feature = "format-json", feature = "compression-lz4"))]
+                (s, "lz4") if s.ends_with(".json") => return Some(FileFormat::JsonLz4),
+                #[cfg(all(feature = "format-json", feature = "compression-zstd"))]
+                (s, "zst") if s.ends_with(".json") => return Some(FileFormat::JsonZstd),
+                #[cfg(all(feature = "format-messagepack", feature = "compression-gzip"))]
+                (s, "gz") if s.ends_with(".msgpack") => return Some(FileFormat::MessagePackGzip),
+                #[cfg(all(feature = "format-messagepack", feature = "compression-lz4"))]
+                (s, "lz4") if s.ends_with(".msgpack") => return Some(FileFormat::MessagePackLz4),
+                #[cfg(all(feature = "format-messagepack", feature = "compression-zstd"))]
+                (s, "zst") if s.ends_with(".msgpack") => return Some(FileFormat::MessagePackZstd),
+                #[cfg(all(feature = "format-bincode", feature = "compression-gzip"))]
+                (s, "gz") if s.ends_with(".bincode") => return Some(FileFormat::BincodeGzip),
+                #[cfg(all(feature = "format-bincode", feature = "compression-lz4"))]
+                (s, "lz4") if s.ends_with(".bincode") => return Some(FileFormat::BincodeLz4),
+                #[cfg(all(feature = "format-bincode", feature = "compression-zstd"))]
+                (s, "zst") if s.ends_with(".bincode") => return Some(FileFormat::BincodeZstd),
+                _ => {}
             }
         }
+
 
         // 单扩展名
         // Single extension

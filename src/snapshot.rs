@@ -2,10 +2,13 @@ use crate::prelude::*;
 use crate::render::{RenderSnapshotTempTexture, RenderSnapshotTexture};
 use crate::{FogSystems, RequestChunkSnapshot};
 use bevy_asset::{Assets, RenderAssetUsages};
+use bevy_camera::visibility::RenderLayers;
+use bevy_camera::{
+    Camera, Camera2d, ClearColorConfig, OrthographicProjection, Projection, RenderTarget,
+    ScalingMode,
+};
 use bevy_color::Color;
 use bevy_core_pipeline::core_2d::graph::{Core2d, Node2d};
-use bevy_camera::{Camera, Camera2d, ClearColorConfig, OrthographicProjection, Projection, RenderTarget, ScalingMode};
-use bevy_camera::visibility::RenderLayers;
 use bevy_image::Image;
 use bevy_math::{IVec2, Rect};
 use bevy_render::RenderApp;
@@ -13,7 +16,7 @@ use bevy_render::extract_component::ExtractComponent;
 use bevy_render::extract_resource::{ExtractResource, ExtractResourcePlugin};
 use bevy_render::render_asset::RenderAssets;
 use bevy_render::render_graph::{
-    Node, NodeRunError, RenderGraphExt, RenderGraphContext, RenderLabel,
+    Node, NodeRunError, RenderGraphContext, RenderGraphExt, RenderLabel,
 };
 use bevy_render::render_resource::{
     Extent3d, Origin3d, TexelCopyTextureInfo, TextureAspect, TextureDimension, TextureUsages,
@@ -349,7 +352,7 @@ fn setup_snapshot_camera(
             ..Default::default()
         },
         RenderTarget::Image(snapshot_temp_handle.clone().into()), // RenderTarget is now a separate component in Bevy 0.18
-        SnapshotCamera, // Mark it as our snapshot camera
+        SnapshotCamera,                                           // Mark it as our snapshot camera
         SNAPSHOT_RENDER_LAYER,
     ));
 }

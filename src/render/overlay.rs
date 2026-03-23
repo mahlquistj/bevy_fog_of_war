@@ -368,13 +368,13 @@ impl FromWorld for FogOverlayPipeline {
                     vertex: VertexState {
                         shader: fullscreen_shader, // Bevy's built-in fullscreen vertex shader
                         shader_defs: vec![],       // No shader preprocessor definitions
-                        entry_point: None, // Use default entry point from shader
-                        buffers: vec![], // No vertex buffers (fullscreen triangle)
+                        entry_point: None,         // Use default entry point from shader
+                        buffers: vec![],           // No vertex buffers (fullscreen triangle)
                     },
                     fragment: Some(FragmentState {
-                        shader,                         // Custom fog overlay fragment shader
-                        shader_defs: vec![],            // No shader preprocessor definitions
-                        entry_point: None, // Use default entry point from shader
+                        shader,              // Custom fog overlay fragment shader
+                        shader_defs: vec![], // No shader preprocessor definitions
+                        entry_point: None,   // Use default entry point from shader
                         targets: vec![Some(ColorTargetState {
                             format: TextureFormat::bevy_default(), // Use Bevy's default HDR format
                             blend: Some(BlendState::ALPHA_BLENDING), // Standard alpha blending for transparency

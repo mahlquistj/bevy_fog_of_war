@@ -519,7 +519,9 @@ pub fn check_and_process_mapped_buffers(
         if let (Some(fog_data), Some(snapshot_data)) =
             (&pending_data.fog_result, &pending_data.snapshot_result)
         {
-            if let Some(mut msgs) = main_world.get_resource_mut::<bevy_ecs::message::Messages<ChunkGpuDataReady>>() {
+            if let Some(mut msgs) =
+                main_world.get_resource_mut::<bevy_ecs::message::Messages<ChunkGpuDataReady>>()
+            {
                 msgs.write(ChunkGpuDataReady {
                     chunk_coords: pending_data.original_request.chunk_coords,
                     fog_data: fog_data.clone(),
@@ -721,7 +723,9 @@ pub(crate) fn check_cpu_to_gpu_request(
         })
         .collect::<Vec<ChunkCpuDataUploaded>>();
 
-    if let Some(mut msgs) = main_world.get_resource_mut::<bevy_ecs::message::Messages<ChunkCpuDataUploaded>>() {
+    if let Some(mut msgs) =
+        main_world.get_resource_mut::<bevy_ecs::message::Messages<ChunkCpuDataUploaded>>()
+    {
         msgs.write_batch(requests);
     }
 }
