@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use bevy_asset::Handle;
-use bevy_ecs::event::Event;
+
 use bevy_image::Image;
 use bevy_math::IVec2;
 use bevy_reflect::Reflect;
@@ -265,7 +265,7 @@ pub struct CpuToGpuCopyRequest {
 /// # use bevy_fog_of_war::prelude::*;
 /// # use bevy::prelude::*;
 /// fn handle_gpu_data_ready(
-///     mut events: EventReader<ChunkGpuDataReady>,
+///     mut events: MessageReader<ChunkGpuDataReady>,
 /// ) {
 ///     for event in events.read() {
 ///         println!("Received GPU data for chunk {:?}", event.chunk_coords);
@@ -276,7 +276,7 @@ pub struct CpuToGpuCopyRequest {
 ///     }
 /// }
 /// ```
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 pub struct ChunkGpuDataReady {
     /// World coordinates of the chunk whose data was transferred.
     /// 数据已传输的区块的世界坐标
@@ -323,7 +323,7 @@ pub struct ChunkGpuDataReady {
 /// # use bevy_fog_of_war::prelude::*;
 /// # use bevy::prelude::*;
 /// fn handle_cpu_data_uploaded(
-///     mut events: EventReader<ChunkCpuDataUploaded>,
+///     mut events: MessageReader<ChunkCpuDataUploaded>,
 ///     mut cache: ResMut<ChunkStateCache>,
 /// ) {
 ///     for event in events.read() {
@@ -337,7 +337,7 @@ pub struct ChunkGpuDataReady {
 ///     }
 /// }
 /// ```
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 pub struct ChunkCpuDataUploaded {
     /// World coordinates of the chunk that was uploaded to GPU.
     /// 已上传到 GPU 的区块的世界坐标
@@ -583,12 +583,12 @@ impl TextureSizeCalculator {
 
 /// 事件：重置所有雾效数据，包括已探索区域、可见性状态和纹理数据。
 /// Event: Reset all fog of war data, including explored areas, visibility states, and texture data.
-#[derive(Event, Debug, Default)]
+#[derive(Message, Debug, Default)]
 pub struct ResetFogOfWar;
 
 /// 事件：雾效重置成功完成
 /// Event: Fog of war reset completed successfully
-#[derive(Event, Debug, Default)]
+#[derive(Message, Debug, Default)]
 pub struct FogResetSuccess {
     /// 重置持续时间（毫秒）
     /// Reset duration in milliseconds
@@ -600,7 +600,7 @@ pub struct FogResetSuccess {
 
 /// 事件：雾效重置失败
 /// Event: Fog of war reset failed
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 pub struct FogResetFailed {
     /// 失败原因
     /// Failure reason

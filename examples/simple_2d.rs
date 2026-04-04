@@ -161,8 +161,8 @@ fn camera_movement(
 /// 监听雾效重置事件的系统
 /// System that listens to fog reset events
 fn handle_fog_reset_events(
-    mut success_events: EventReader<FogResetSuccess>,
-    mut failure_events: EventReader<FogResetFailed>,
+    mut success_events: MessageReader<FogResetSuccess>,
+    mut failure_events: MessageReader<FogResetFailed>,
 ) {
     for event in success_events.read() {
         info!(
@@ -184,8 +184,8 @@ fn handle_fog_reset_events(
 fn handle_save_load_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
-    mut save_events: EventWriter<SaveFogOfWarRequest>,
-    mut load_events: EventWriter<LoadFogOfWarRequest>,
+    mut save_events: MessageWriter<SaveFogOfWarRequest>,
+    mut load_events: MessageWriter<LoadFogOfWarRequest>,
     capturable_entities: Query<Entity, With<Capturable>>,
 ) {
     // F5键 - 保存雾效数据
@@ -252,7 +252,7 @@ fn handle_save_load_input(
 
 /// 处理保存完成事件（演示多格式保存）
 /// Handle save completion event (demonstrate multi-format saving)
-fn handle_saved_event(mut events: EventReader<FogOfWarSaved>) {
+fn handle_saved_event(mut events: MessageReader<FogOfWarSaved>) {
     for event in events.read() {
         // 直接使用序列化后的二进制数据
         // Use the serialized binary data directly
@@ -290,7 +290,7 @@ fn handle_saved_event(mut events: EventReader<FogOfWarSaved>) {
 
 /// 处理加载完成事件
 /// Handle load completion event
-fn handle_loaded_event(mut events: EventReader<FogOfWarLoaded>) {
+fn handle_loaded_event(mut events: MessageReader<FogOfWarLoaded>) {
     for event in events.read() {
         info!("✅ Successfully loaded {} chunks", event.chunk_count);
 

@@ -67,9 +67,9 @@
 
 use crate::prelude::*;
 use bevy_core_pipeline::core_2d::graph::{Core2d, Node2d};
-use bevy_render::render_graph::{RenderGraphApp, ViewNodeRunner};
+use bevy_render::render_graph::{RenderGraphExt, ViewNodeRunner};
 use bevy_render::renderer::render_system;
-use bevy_render::{Render, RenderApp, RenderSet};
+use bevy_render::{Render, RenderApp, RenderSystems};
 
 // Render pipeline submodules
 // 渲染管线子模块
@@ -208,7 +208,7 @@ impl Plugin for FogOfWarRenderPlugin {
                 Render,
                 (
                     // CPU -> GPU
-                    (transfer::process_cpu_to_gpu_copies,).in_set(RenderSet::PrepareResources),
+                    (transfer::process_cpu_to_gpu_copies,).in_set(RenderSystems::PrepareResources),
                     // GPU -> CPU - Stage 1: Initiate copy and request map
                     // Run this after rendering/compute that populates the textures for the current frame.
                     // CleanupCommands is a good place.
@@ -217,7 +217,7 @@ impl Plugin for FogOfWarRenderPlugin {
                         transfer::map_buffers,
                     )
                         .after(render_system)
-                        .in_set(RenderSet::Render),
+                        .in_set(RenderSystems::Render),
                     // GPU -> CPU - Stage 2: Check for mapped buffers and process them
                     // Run this in the *next* frame, typically early (e.g., Prepare).
                     // Or, if your game loop/framerate allows, and map_async is fast on your GPU,
@@ -236,7 +236,7 @@ impl Plugin for FogOfWarRenderPlugin {
                     prepare::prepare_overlay_chunk_mapping_buffer,
                     prepare::prepare_fog_bind_groups,
                 )
-                    .in_set(RenderSet::PrepareBindGroups),
+                    .in_set(RenderSystems::PrepareBindGroups),
             );
 
         // Add Render Graph nodes / 添加 Render Graph 节点

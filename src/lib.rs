@@ -59,10 +59,10 @@ use self::prelude::*;
 use crate::persistence::FogOfWarPersistencePlugin;
 use crate::render::FogOfWarRenderPlugin;
 use bevy_asset::{Assets, RenderAssetUsages};
+use bevy_camera::{Camera, Projection, RenderTarget};
 use bevy_image::{Image, ImageSampler, ImageSamplerDescriptor};
 use bevy_math::{IVec2, Rect, Vec2};
 use bevy_platform::collections::HashSet;
-use bevy_render::camera::RenderTarget;
 use bevy_render::extract_component::ExtractComponentPlugin;
 use bevy_render::extract_resource::ExtractResourcePlugin;
 use bevy_render::render_resource::{Extent3d, TextureDimension, TextureUsages};
@@ -97,7 +97,7 @@ mod texture_handles;
 /// - A chunk becomes explored for the first time
 /// - A chunk transitions from explored to visible
 /// - A chunk re-enters visibility after being out of sight
-#[derive(Event, Debug, Clone, Copy)]
+#[derive(Message, Debug, Clone, Copy)]
 pub struct RequestChunkSnapshot(pub IVec2);
 
 /// System sets that define the execution order of fog of war systems.
@@ -244,12 +244,12 @@ impl Plugin for FogOfWarPlugin {
             .init_resource::<MainWorldSnapshotRequestQueue>()
             .init_resource::<FogResetSync>();
 
-        app.add_event::<ChunkGpuDataReady>()
-            .add_event::<ChunkCpuDataUploaded>()
-            .add_event::<RequestChunkSnapshot>() // Added event for remaking snapshots / 添加用于重制快照的事件
-            .add_event::<ResetFogOfWar>() // Added event for resetting fog of war / 添加用于重置雾效的事件
-            .add_event::<FogResetSuccess>() // Added event for successful reset / 添加用于成功重置的事件
-            .add_event::<FogResetFailed>(); // Added event for failed reset / 添加用于失败重置的事件
+        app.add_message::<ChunkGpuDataReady>()
+            .add_message::<ChunkCpuDataUploaded>()
+            .add_message::<RequestChunkSnapshot>() // Added event for remaking snapshots / 添加用于重制快照的事件
+            .add_message::<ResetFogOfWar>() // Added event for resetting fog of war / 添加用于重置雾效的事件
+            .add_message::<FogResetSuccess>() // Added event for successful reset / 添加用于成功重置的事件
+            .add_message::<FogResetFailed>(); // Added event for failed reset / 添加用于失败重置的事件
 
         app.add_plugins(ExtractResourcePlugin::<GpuToCpuCopyRequests>::default())
             .add_plugins(ExtractResourcePlugin::<CpuToGpuCopyRequests>::default())
@@ -548,15 +548,22 @@ fn update_camera_view_chunks(
     mut cache: ResMut<ChunkStateCache>,
     // Assuming a single primary 2D camera with OrthographicProjection
     // 假设有一个带 OrthographicProjection 的主 2D 相机
-    camera_q: Query<(&Camera, &GlobalTransform, &Projection)>,
+    camera_q: Query<(
+        &Camera,
+        &GlobalTransform,
+        &Projection,
+        Option<&RenderTarget>,
+    )>,
 ) {
     let chunk_size = settings.chunk_size.as_vec2();
 
-    for (camera, cam_transform, projection) in camera_q.iter() {
+    for (camera, cam_transform, projection, render_target) in camera_q.iter() {
         if let Projection::Orthographic(projection) = projection {
             // Consider only the active camera targeting the primary window
             // 只考虑渲染到主窗口的活动相机
-            if !camera.is_active || !matches!(camera.target, RenderTarget::Window(_)) {
+            let targets_window =
+                render_target.is_none_or(|rt| matches!(rt, RenderTarget::Window(_)));
+            if !camera.is_active || !targets_window {
                 continue;
             }
 
@@ -595,7 +602,7 @@ fn update_chunk_component_state(
     cache: Res<ChunkStateCache>,
     chunk_manager: Res<ChunkEntityManager>,
     mut chunk_q: Query<&mut FogChunk>,
-    mut snapshot_event_writer: EventWriter<RequestChunkSnapshot>, // Changed to EventWriter / 更改为 EventWriter
+    mut snapshot_event_writer: MessageWriter<RequestChunkSnapshot>, // Changed to EventWriter / 更改为 EventWriter
 ) {
     for (coords, entity) in chunk_manager.map.iter() {
         if let Ok(mut chunk) = chunk_q.get_mut(*entity) {
@@ -862,8 +869,8 @@ pub fn manage_chunk_texture_transfer(
     mut texture_manager: ResMut<TextureArrayManager>,
     mut gpu_to_cpu_requests: ResMut<GpuToCpuCopyRequests>,
     mut cpu_to_gpu_requests: ResMut<CpuToGpuCopyRequests>,
-    mut gpu_data_ready_reader: EventReader<ChunkGpuDataReady>,
-    mut cpu_data_uploaded_reader: EventReader<ChunkCpuDataUploaded>,
+    mut gpu_data_ready_reader: MessageReader<ChunkGpuDataReady>,
+    mut cpu_data_uploaded_reader: MessageReader<ChunkCpuDataUploaded>,
     mut snapshot_requests: ResMut<MainWorldSnapshotRequestQueue>,
 ) {
     for event in gpu_data_ready_reader.read() {
@@ -1117,7 +1124,7 @@ pub fn manage_chunk_texture_transfer(
 /// Refactored to 4 parameters to reduce coupling.
 #[allow(clippy::too_many_arguments)]
 fn reset_fog_of_war_system(
-    mut events: EventReader<ResetFogOfWar>,
+    mut events: MessageReader<ResetFogOfWar>,
     mut cache: ResMut<ChunkStateCache>,
     mut chunk_q: Query<&mut FogChunk>,
     mut chunk_query: Query<(Entity, &mut FogChunkImage)>,
@@ -1454,8 +1461,8 @@ fn monitor_reset_sync_system(
     mut reset_sync: ResMut<FogResetSync>,
     mut cache: ResMut<ChunkStateCache>,
     time: Res<Time>,
-    mut success_events: EventWriter<FogResetSuccess>,
-    mut failure_events: EventWriter<FogResetFailed>,
+    mut success_events: MessageWriter<FogResetSuccess>,
+    mut failure_events: MessageWriter<FogResetFailed>,
 ) {
     let current_time = time.elapsed().as_millis() as u64;
 

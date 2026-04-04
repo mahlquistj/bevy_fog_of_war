@@ -1061,7 +1061,7 @@ impl TextureArrayManager {
     /// # Integration with Game Events
     /// ```rust,ignore
     /// fn handle_new_game_event(
-    ///     mut new_game_events: EventReader<NewGameEvent>,
+    ///     mut new_game_events: MessageReader<NewGameEvent>,
     ///     mut manager: ResMut<TextureArrayManager>,
     ///     mut cache: ResMut<ChunkStateCache>,
     /// ) {

@@ -112,7 +112,7 @@ use super::extract::{
 use super::prepare::{FogUniforms, OverlayChunkMappingBuffer};
 use crate::snapshot::SnapshotCamera;
 use bevy_asset::DirectAssetAccessExt;
-use bevy_core_pipeline::fullscreen_vertex_shader::FULLSCREEN_SHADER_HANDLE;
+use bevy_core_pipeline::FullscreenShader;
 use bevy_ecs::prelude::*;
 use bevy_ecs::query::QueryItem;
 use bevy_ecs::system::lifetimeless::Read;
@@ -249,7 +249,7 @@ pub struct FogOverlayPipeline {
     ///
     /// This layout specifies how CPU resources (textures, buffers, uniforms)
     /// are bound to GPU shader inputs. Used to create bind groups for overlay rendering.
-    layout: BindGroupLayout,
+    layout: BindGroupLayoutDescriptor,
 
     /// Shared texture sampler for all fog texture array operations.
     /// 用于所有雾效纹理数组操作的共享纹理采样器
@@ -318,9 +318,9 @@ impl FromWorld for FogOverlayPipeline {
     fn from_world(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
 
-        // Create bind group layout defining shader resource binding schema
-        // 创建定义着色器资源绑定模式的绑定组布局
-        let layout = render_device.create_bind_group_layout(
+        // Create bind group layout descriptor (Bevy 0.18: BindGroupLayoutDescriptor not BindGroupLayout)
+        // 创建绑定组布局描述符 (Bevy 0.18: BindGroupLayoutDescriptor 而非 BindGroupLayout)
+        let layout = BindGroupLayoutDescriptor::new(
             "fog_overlay_bind_group_layout",
             &BindGroupLayoutEntries::sequential(
                 ShaderStages::FRAGMENT,
@@ -353,6 +353,10 @@ impl FromWorld for FogOverlayPipeline {
         // 加载雾效覆盖片段着色器资源
         let shader = world.load_asset(SHADER_ASSET_PATH);
 
+        // Get the fullscreen vertex shader handle from the FullscreenShader resource
+        // 从 FullscreenShader 资源获取全屏顶点着色器句柄
+        let fullscreen_shader = world.resource::<FullscreenShader>().shader().clone();
+
         // Queue render pipeline for compilation with complete configuration
         // 排队渲染管线以进行完整配置的编译
         let pipeline_id =
@@ -362,15 +366,15 @@ impl FromWorld for FogOverlayPipeline {
                     label: Some("fog_overlay_pipeline_init".into()), // Pipeline identifier for debugging
                     layout: vec![layout.clone()], // Use the bind group layout created above
                     vertex: VertexState {
-                        shader: FULLSCREEN_SHADER_HANDLE, // Bevy's built-in fullscreen vertex shader
-                        shader_defs: vec![],              // No shader preprocessor definitions
-                        entry_point: "fullscreen_vertex_shader".into(), // Standard vertex entry point
-                        buffers: vec![], // No vertex buffers (fullscreen triangle)
+                        shader: fullscreen_shader, // Bevy's built-in fullscreen vertex shader
+                        shader_defs: vec![],       // No shader preprocessor definitions
+                        entry_point: None,         // Use default entry point from shader
+                        buffers: vec![],           // No vertex buffers (fullscreen triangle)
                     },
                     fragment: Some(FragmentState {
-                        shader,                         // Custom fog overlay fragment shader
-                        shader_defs: vec![],            // No shader preprocessor definitions
-                        entry_point: "fragment".into(), // Fragment shader entry point
+                        shader,              // Custom fog overlay fragment shader
+                        shader_defs: vec![], // No shader preprocessor definitions
+                        entry_point: None,   // Use default entry point from shader
                         targets: vec![Some(ColorTargetState {
                             format: TextureFormat::bevy_default(), // Use Bevy's default HDR format
                             blend: Some(BlendState::ALPHA_BLENDING), // Standard alpha blending for transparency
@@ -387,7 +391,7 @@ impl FromWorld for FogOverlayPipeline {
         // Return configured pipeline with all components
         // 返回包含所有组件的配置管线
         FogOverlayPipeline {
-            layout,      // Bind group layout for resource binding
+            layout,      // Bind group layout descriptor for resource binding
             sampler,     // Texture sampler for filtering
             pipeline_id, // Cached pipeline ID for runtime retrieval
         }
@@ -541,9 +545,11 @@ impl ViewNode for FogOverlayNode {
 
         // Create view-specific bind group with all required GPU resources
         // 创建包含所有必需GPU资源的视图特定绑定组
+        // Bevy 0.18: use pipeline_cache.get_bind_group_layout() to resolve descriptor
+        let overlay_layout = pipeline_cache.get_bind_group_layout(&overlay_pipeline.layout);
         let bind_group = render_context.render_device().create_bind_group(
             "fog_overlay_bind_group",
-            &overlay_pipeline.layout,
+            &overlay_layout,
             &BindGroupEntries::sequential((
                 view_uniform_binding,            // 0: Camera view uniforms (with dynamic offset)
                 &overlay_pipeline.sampler,       // 1: Linear filtering sampler for textures
@@ -562,6 +568,7 @@ impl ViewNode for FogOverlayNode {
             color_attachments: &[Some(RenderPassColorAttachment {
                 view: view_target.main_texture_view(), // Render to main view target
                 resolve_target: None,                  // No MSAA resolve needed
+                depth_slice: None,                     // No depth slice for 2D overlay
                 ops: Operations {
                     load: LoadOp::Load,    // Load existing scene content
                     store: StoreOp::Store, // Store final composited result

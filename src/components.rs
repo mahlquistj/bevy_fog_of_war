@@ -588,7 +588,7 @@ impl FogChunkImage {
     /// ```
     pub fn from_setting_raw(images: &mut Assets<Image>, setting: &FogMapSettings) -> Self {
         // Create fog texture with zero-filled initial data
-        let data = vec![0u8; setting.fog_texture_format.pixel_size()];
+        let data = vec![0u8; setting.fog_texture_format.pixel_size().unwrap_or(0)];
         let mut fog_image = Image::new_fill(
             Extent3d {
                 width: setting.texture_resolution_per_chunk.x,
@@ -608,7 +608,7 @@ impl FogChunkImage {
         let fog_image_handle = images.add(fog_image);
 
         // Create snapshot texture with identical configuration
-        let data = vec![0u8; setting.snapshot_texture_format.pixel_size()];
+        let data = vec![0u8; setting.snapshot_texture_format.pixel_size().unwrap_or(0)];
         let mut snapshot_image = Image::new_fill(
             Extent3d {
                 width: setting.texture_resolution_per_chunk.x,
